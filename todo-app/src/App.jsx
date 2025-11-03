@@ -570,40 +570,48 @@ function App() {
                 </button>
               </div>
             ) : (
-              <div className="series-management-grid">
+              <div className="product-grid">
                 {uniqueSeries.map(series => {
                   const seriesObj = seriesData.find(s => s.name === series)
                   const productCount = metrics.seriesBreakdown[series] || 0
 
                   return (
-                    <div key={series} className="series-management-card">
-                      <div className="series-info">
-                        <h3 className="series-management-name">{series}</h3>
-                        {seriesObj && seriesObj.description && (
-                          <p className="series-description">{seriesObj.description}</p>
-                        )}
-                        <p className="series-product-count">
-                          {productCount} product{productCount !== 1 ? 's' : ''}
-                        </p>
+                    <div key={series} className="product-card">
+                      <div className="product-header">
+                        <h3 className="product-name">{series}</h3>
+                        <div className="product-actions">
+                          <button
+                            onClick={() => {
+                              editSeries(series)
+                              setActiveView('addSeries')
+                            }}
+                            className="edit-button"
+                            title="Edit series"
+                          >
+                            ✏️
+                          </button>
+                          <button
+                            onClick={() => deleteSeries(series)}
+                            className="delete-button"
+                            title="Delete series"
+                          >
+                            🗑️
+                          </button>
+                        </div>
                       </div>
-                      <div className="series-actions">
-                        <button
-                          onClick={() => {
-                            editSeries(series)
-                            setActiveView('addSeries')
-                          }}
-                          className="edit-button"
-                          title="Edit series"
-                        >
-                          ✏️ Edit
-                        </button>
-                        <button
-                          onClick={() => deleteSeries(series)}
-                          className="delete-button"
-                          title="Delete series"
-                        >
-                          🗑️ Delete
-                        </button>
+
+                      <div className="product-details">
+                        {seriesObj && seriesObj.description && (
+                          <div className="product-description">
+                            <span className="label">Description:</span>
+                            <p className="value">{seriesObj.description}</p>
+                          </div>
+                        )}
+
+                        <div className="product-quantity">
+                          <span className="label">Products:</span>
+                          <span className="value">{productCount}</span>
+                        </div>
                       </div>
                     </div>
                   )
