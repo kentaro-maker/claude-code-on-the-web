@@ -22,7 +22,12 @@ function App() {
     price: '',
     series: '',
     description: '',
-    quantity: ''
+    quantity: '',
+    size: '',
+    unit: 'sq ft',
+    piecesPerBox: '',
+    sqFtPerBox: '',
+    boxesPerPallet: ''
   })
 
   const [editingId, setEditingId] = useState(null)
@@ -68,6 +73,30 @@ function App() {
       : 0
     const lowStock = products.filter(p => p.quantity > 0 && p.quantity < 10).length
 
+    // Tile-specific metrics
+    const totalBoxes = products.reduce((sum, p) => {
+      if (p.piecesPerBox > 0 && p.quantity > 0) {
+        return sum + Math.ceil(p.quantity / p.piecesPerBox)
+      }
+      return sum
+    }, 0)
+
+    const totalPallets = products.reduce((sum, p) => {
+      if (p.piecesPerBox > 0 && p.boxesPerPallet > 0 && p.quantity > 0) {
+        const boxes = Math.ceil(p.quantity / p.piecesPerBox)
+        return sum + Math.ceil(boxes / p.boxesPerPallet)
+      }
+      return sum
+    }, 0)
+
+    const totalSqFt = products.reduce((sum, p) => {
+      if (p.sqFtPerBox > 0 && p.piecesPerBox > 0 && p.quantity > 0) {
+        const boxes = Math.ceil(p.quantity / p.piecesPerBox)
+        return sum + (boxes * p.sqFtPerBox)
+      }
+      return sum
+    }, 0)
+
     const seriesBreakdown = products.reduce((acc, p) => {
       if (p.series) {
         acc[p.series] = (acc[p.series] || 0) + 1
@@ -81,6 +110,9 @@ function App() {
       uniqueSeries,
       avgPrice,
       lowStock,
+      totalBoxes,
+      totalPallets,
+      totalSqFt,
       seriesBreakdown
     }
   }
@@ -246,7 +278,12 @@ function App() {
                 price: parseFloat(formData.price),
                 series: formData.series,
                 description: formData.description,
-                quantity: formData.quantity ? parseInt(formData.quantity) : 0
+                quantity: formData.quantity ? parseInt(formData.quantity) : 0,
+                size: formData.size,
+                unit: formData.unit,
+                piecesPerBox: formData.piecesPerBox ? parseInt(formData.piecesPerBox) : 0,
+                sqFtPerBox: formData.sqFtPerBox ? parseFloat(formData.sqFtPerBox) : 0,
+                boxesPerPallet: formData.boxesPerPallet ? parseInt(formData.boxesPerPallet) : 0
               }
             : product
         ))
@@ -259,7 +296,12 @@ function App() {
           price: parseFloat(formData.price),
           series: formData.series,
           description: formData.description,
-          quantity: formData.quantity ? parseInt(formData.quantity) : 0
+          quantity: formData.quantity ? parseInt(formData.quantity) : 0,
+          size: formData.size,
+          unit: formData.unit,
+          piecesPerBox: formData.piecesPerBox ? parseInt(formData.piecesPerBox) : 0,
+          sqFtPerBox: formData.sqFtPerBox ? parseFloat(formData.sqFtPerBox) : 0,
+          boxesPerPallet: formData.boxesPerPallet ? parseInt(formData.boxesPerPallet) : 0
         }
         setProducts([...products, newProduct])
       }
@@ -270,7 +312,12 @@ function App() {
         price: '',
         series: '',
         description: '',
-        quantity: ''
+        quantity: '',
+        size: '',
+        unit: 'sq ft',
+        piecesPerBox: '',
+        sqFtPerBox: '',
+        boxesPerPallet: ''
       })
       setShowNewSeriesInput(false)
       setNewSeriesInput('')
@@ -284,7 +331,12 @@ function App() {
       price: product.price.toString(),
       series: product.series || '',
       description: product.description || '',
-      quantity: product.quantity.toString()
+      quantity: product.quantity.toString(),
+      size: product.size || '',
+      unit: product.unit || 'sq ft',
+      piecesPerBox: product.piecesPerBox ? product.piecesPerBox.toString() : '',
+      sqFtPerBox: product.sqFtPerBox ? product.sqFtPerBox.toString() : '',
+      boxesPerPallet: product.boxesPerPallet ? product.boxesPerPallet.toString() : ''
     })
     setEditingId(product.id)
     setShowNewSeriesInput(false)
@@ -300,7 +352,12 @@ function App() {
       price: '',
       series: '',
       description: '',
-      quantity: ''
+      quantity: '',
+      size: '',
+      unit: 'sq ft',
+      piecesPerBox: '',
+      sqFtPerBox: '',
+      boxesPerPallet: ''
     })
     setShowNewSeriesInput(false)
     setNewSeriesInput('')
@@ -328,7 +385,7 @@ function App() {
       {/* Sidebar */}
       <aside className="sidebar">
         <div className="sidebar-header">
-          <h2 className="sidebar-title">📦 Product Hub</h2>
+          <h2 className="sidebar-title">🏗️ Tile Hub</h2>
         </div>
 
         <nav className="sidebar-nav">
@@ -351,13 +408,13 @@ function App() {
             onClick={() => setActiveView('add')}
           >
             <span className="nav-icon">➕</span>
-            <span>{editingId ? 'Edit Product' : 'Add Product'}</span>
+            <span>{editingId ? 'Edit Tile' : 'Add Tile'}</span>
           </button>
         </nav>
 
         <div className="sidebar-footer">
           <div className="quick-stats">
-            <p className="quick-stat-label">Total Products</p>
+            <p className="quick-stat-label">Tile Types</p>
             <p className="quick-stat-value">{products.length}</p>
           </div>
         </div>
@@ -369,16 +426,16 @@ function App() {
         <header className="dashboard-header">
           <div>
             <h1 className="dashboard-title">
-              {activeView === 'overview' && 'Product Management Dashboard'}
+              {activeView === 'overview' && 'Tile Inventory Dashboard'}
               {activeView === 'series' && 'Series Management'}
               {activeView === 'addSeries' && (editingSeriesId ? 'Edit Series' : 'Add New Series')}
-              {activeView === 'add' && (editingId ? 'Edit Product' : 'Add New Product')}
+              {activeView === 'add' && (editingId ? 'Edit Tile' : 'Add New Tile')}
             </h1>
             <p className="dashboard-subtitle">
-              {activeView === 'overview' && 'Monitor and manage your product inventory'}
-              {activeView === 'series' && 'Manage your product series and categories'}
+              {activeView === 'overview' && 'Monitor and manage your tile inventory, packing, and palletizing'}
+              {activeView === 'series' && 'Manage your tile series and categories'}
               {activeView === 'addSeries' && 'Fill in the series details below'}
-              {activeView === 'add' && 'Fill in the product details below'}
+              {activeView === 'add' && 'Fill in the tile details below'}
             </p>
           </div>
         </header>
@@ -397,9 +454,9 @@ function App() {
               </div>
 
               <div className="metric-card">
-                <div className="metric-icon">📦</div>
+                <div className="metric-icon">🏗️</div>
                 <div className="metric-content">
-                  <p className="metric-label">Total Products</p>
+                  <p className="metric-label">Tile Types</p>
                   <p className="metric-value">{products.length}</p>
                 </div>
               </div>
@@ -407,32 +464,32 @@ function App() {
               <div className="metric-card">
                 <div className="metric-icon">📊</div>
                 <div className="metric-content">
-                  <p className="metric-label">Total Quantity</p>
+                  <p className="metric-label">Total Pieces</p>
                   <p className="metric-value">{metrics.totalQuantity}</p>
                 </div>
               </div>
 
               <div className="metric-card">
-                <div className="metric-icon">💵</div>
+                <div className="metric-icon">📦</div>
                 <div className="metric-content">
-                  <p className="metric-label">Avg Price</p>
-                  <p className="metric-value">${metrics.avgPrice.toFixed(2)}</p>
+                  <p className="metric-label">Total Boxes</p>
+                  <p className="metric-value">{metrics.totalBoxes}</p>
                 </div>
               </div>
 
               <div className="metric-card">
-                <div className="metric-icon">🏷️</div>
+                <div className="metric-icon">🚚</div>
                 <div className="metric-content">
-                  <p className="metric-label">Series Count</p>
-                  <p className="metric-value">{metrics.uniqueSeries}</p>
+                  <p className="metric-label">Total Pallets</p>
+                  <p className="metric-value">{metrics.totalPallets}</p>
                 </div>
               </div>
 
-              <div className="metric-card alert">
-                <div className="metric-icon">⚠️</div>
+              <div className="metric-card">
+                <div className="metric-icon">📐</div>
                 <div className="metric-content">
-                  <p className="metric-label">Low Stock</p>
-                  <p className="metric-value">{metrics.lowStock}</p>
+                  <p className="metric-label">Total Coverage</p>
+                  <p className="metric-value">{metrics.totalSqFt.toFixed(0)} sq ft</p>
                 </div>
               </div>
             </div>
@@ -460,28 +517,28 @@ function App() {
               </div>
             )}
 
-            {/* Products Table */}
+            {/* Tiles Table */}
             <div className="section">
               <div className="section-header">
-                <h2 className="section-title">All Products</h2>
+                <h2 className="section-title">All Tiles</h2>
                 <button
                   className="btn-primary"
                   onClick={() => setActiveView('add')}
                 >
-                  ➕ Add Product
+                  ➕ Add Tile
                 </button>
               </div>
 
               {products.length === 0 ? (
                 <div className="empty-state">
-                  <div className="empty-icon">📦</div>
-                  <p className="empty-title">No products yet</p>
-                  <p className="empty-description">Get started by adding your first product</p>
+                  <div className="empty-icon">🏗️</div>
+                  <p className="empty-title">No tiles yet</p>
+                  <p className="empty-description">Get started by adding your first tile product</p>
                   <button
                     className="btn-primary"
                     onClick={() => setActiveView('add')}
                   >
-                    Add Your First Product
+                    Add Your First Tile
                   </button>
                 </div>
               ) : (
@@ -507,18 +564,46 @@ function App() {
                           </div>
                         )}
 
+                        {product.size && (
+                          <div className="product-size">
+                            <span className="label">Size:</span>
+                            <span className="value">{product.size}</span>
+                          </div>
+                        )}
+
                         <div className="product-price">
                           <span className="label">Price:</span>
-                          <span className="value">${product.price.toFixed(2)}</span>
+                          <span className="value">${product.price.toFixed(2)} {product.unit ? `/ ${product.unit}` : ''}</span>
                         </div>
 
                         {product.quantity > 0 && (
                           <div className="product-quantity">
                             <span className="label">Quantity:</span>
                             <span className={`value ${product.quantity < 10 ? 'low-stock' : ''}`}>
-                              {product.quantity}
+                              {product.quantity} {product.unit || 'pieces'}
                               {product.quantity < 10 && <span className="low-stock-badge">Low</span>}
                             </span>
+                          </div>
+                        )}
+
+                        {product.piecesPerBox > 0 && (
+                          <div className="product-packing">
+                            <span className="label">Packing:</span>
+                            <span className="value">{product.piecesPerBox} pcs/box{product.sqFtPerBox > 0 ? `, ${product.sqFtPerBox} sq ft/box` : ''}</span>
+                          </div>
+                        )}
+
+                        {product.piecesPerBox > 0 && product.quantity > 0 && (
+                          <div className="product-boxes">
+                            <span className="label">Total Boxes:</span>
+                            <span className="value">{Math.ceil(product.quantity / product.piecesPerBox)}</span>
+                          </div>
+                        )}
+
+                        {product.boxesPerPallet > 0 && product.piecesPerBox > 0 && product.quantity > 0 && (
+                          <div className="product-pallets">
+                            <span className="label">Palletizing:</span>
+                            <span className="value">{product.boxesPerPallet} boxes/pallet → {Math.ceil(Math.ceil(product.quantity / product.piecesPerBox) / product.boxesPerPallet)} pallets needed</span>
                           </div>
                         )}
 
@@ -531,7 +616,7 @@ function App() {
 
                         {product.quantity > 0 && (
                           <div className="product-total">
-                            <span className="label">Total:</span>
+                            <span className="label">Total Value:</span>
                             <span className="value highlight">${(product.price * product.quantity).toFixed(2)}</span>
                           </div>
                         )}
@@ -687,10 +772,22 @@ function App() {
                   value={formData.name}
                   onChange={handleInputChange}
                   onKeyPress={handleKeyPress}
-                  placeholder="Product name *"
+                  placeholder="Tile name *"
                   className="product-input"
                 />
 
+                <input
+                  type="text"
+                  name="size"
+                  value={formData.size}
+                  onChange={handleInputChange}
+                  onKeyPress={handleKeyPress}
+                  placeholder="Size (e.g., 12x12, 6x6)"
+                  className="product-input"
+                />
+              </div>
+
+              <div className="form-row">
                 <div className="series-select-container">
                   <select
                     name="series"
@@ -718,14 +815,64 @@ function App() {
                   )}
                 </div>
 
+                <select
+                  name="unit"
+                  value={formData.unit}
+                  onChange={handleInputChange}
+                  className="product-input"
+                >
+                  <option value="sq ft">Square Feet (sq ft)</option>
+                  <option value="pieces">Pieces</option>
+                  <option value="linear ft">Linear Feet</option>
+                  <option value="boxes">Boxes</option>
+                </select>
+              </div>
+
+              <div className="form-row">
                 <input
                   type="number"
                   name="price"
                   value={formData.price}
                   onChange={handleInputChange}
                   onKeyPress={handleKeyPress}
-                  placeholder="Price *"
+                  placeholder="Price per unit *"
                   className="product-input price-input"
+                  step="0.01"
+                  min="0"
+                />
+
+                <input
+                  type="number"
+                  name="quantity"
+                  value={formData.quantity}
+                  onChange={handleInputChange}
+                  onKeyPress={handleKeyPress}
+                  placeholder="Total quantity (pieces)"
+                  className="product-input quantity-input"
+                  min="0"
+                />
+              </div>
+
+              <div className="form-row">
+                <input
+                  type="number"
+                  name="piecesPerBox"
+                  value={formData.piecesPerBox}
+                  onChange={handleInputChange}
+                  onKeyPress={handleKeyPress}
+                  placeholder="Pieces per box"
+                  className="product-input"
+                  min="0"
+                />
+
+                <input
+                  type="number"
+                  name="sqFtPerBox"
+                  value={formData.sqFtPerBox}
+                  onChange={handleInputChange}
+                  onKeyPress={handleKeyPress}
+                  placeholder="Sq ft per box"
+                  className="product-input"
                   step="0.01"
                   min="0"
                 />
@@ -734,14 +881,15 @@ function App() {
               <div className="form-row">
                 <input
                   type="number"
-                  name="quantity"
-                  value={formData.quantity}
+                  name="boxesPerPallet"
+                  value={formData.boxesPerPallet}
                   onChange={handleInputChange}
                   onKeyPress={handleKeyPress}
-                  placeholder="Quantity"
-                  className="product-input quantity-input"
+                  placeholder="Boxes per pallet"
+                  className="product-input"
                   min="0"
                 />
+
                 <input
                   type="text"
                   name="description"
@@ -754,7 +902,7 @@ function App() {
 
               <div className="button-row">
                 <button onClick={saveProduct} className="btn-primary">
-                  {editingId ? '✓ Update Product' : '+ Add Product'}
+                  {editingId ? '✓ Update Tile' : '+ Add Tile'}
                 </button>
                 <button onClick={cancelEdit} className="btn-secondary">
                   ✕ Cancel
