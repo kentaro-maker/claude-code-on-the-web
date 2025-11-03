@@ -2,17 +2,17 @@
   min-height: 100vh;
   display: flex;
   justify-content: center;
-  align-items: center;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  padding: 20px;
+  align-items: flex-start;
+  background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+  padding: 40px 20px;
 }
 
-.todo-container {
+.product-container {
   background: white;
   border-radius: 20px;
   padding: 40px;
   width: 100%;
-  max-width: 600px;
+  max-width: 1000px;
   box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
 }
 
@@ -24,29 +24,50 @@ h1 {
   text-align: center;
 }
 
-.input-section {
-  display: flex;
-  gap: 10px;
-  margin-bottom: 20px;
+.form-section {
+  background: #f8f9fa;
+  padding: 25px;
+  border-radius: 15px;
+  margin-bottom: 30px;
 }
 
-.todo-input {
+.form-row {
+  display: flex;
+  gap: 15px;
+  margin-bottom: 15px;
+}
+
+.product-input {
   flex: 1;
-  padding: 15px 20px;
+  padding: 12px 18px;
   border: 2px solid #e0e0e0;
   border-radius: 10px;
   font-size: 16px;
   transition: border-color 0.3s;
   outline: none;
+  font-family: inherit;
 }
 
-.todo-input:focus {
-  border-color: #667eea;
+.product-input:focus {
+  border-color: #11998e;
+}
+
+.price-input {
+  max-width: 150px;
+}
+
+.quantity-input {
+  max-width: 150px;
+}
+
+.description-input {
+  flex: 2;
 }
 
 .add-button {
+  width: 100%;
   padding: 15px 30px;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
   color: white;
   border: none;
   border-radius: 10px;
@@ -54,11 +75,12 @@ h1 {
   font-weight: 600;
   cursor: pointer;
   transition: transform 0.2s, box-shadow 0.2s;
+  margin-top: 10px;
 }
 
 .add-button:hover {
   transform: translateY(-2px);
-  box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+  box-shadow: 0 5px 15px rgba(17, 153, 142, 0.4);
 }
 
 .add-button:active {
@@ -68,74 +90,126 @@ h1 {
 .stats {
   text-align: center;
   color: #666;
-  margin-bottom: 20px;
-  font-size: 14px;
+  margin-bottom: 25px;
+  font-size: 16px;
+  font-weight: 500;
 }
 
 .stats p {
   margin: 0;
 }
 
-.todo-list {
-  list-style: none;
-  padding: 0;
-  margin: 0;
+.product-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 20px;
+  margin-bottom: 20px;
 }
 
-.todo-item {
+.product-card {
+  background: #ffffff;
+  border: 2px solid #e0e0e0;
+  border-radius: 15px;
+  padding: 20px;
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.product-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+  border-color: #11998e;
+}
+
+.product-header {
   display: flex;
-  align-items: center;
-  gap: 15px;
-  padding: 15px 20px;
-  background: #f8f9fa;
-  border-radius: 10px;
-  margin-bottom: 10px;
-  transition: transform 0.2s, background-color 0.3s;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 15px;
+  padding-bottom: 15px;
+  border-bottom: 2px solid #f0f0f0;
 }
 
-.todo-item:hover {
-  transform: translateX(5px);
-  background: #f0f0f0;
-}
-
-.todo-item.completed {
-  opacity: 0.6;
-}
-
-.checkbox {
-  width: 20px;
-  height: 20px;
-  cursor: pointer;
-  accent-color: #667eea;
-}
-
-.todo-text {
-  flex: 1;
-  font-size: 16px;
+.product-name {
+  margin: 0;
   color: #333;
-}
-
-.todo-item.completed .todo-text {
-  text-decoration: line-through;
-  color: #999;
+  font-size: 1.3rem;
+  flex: 1;
+  word-break: break-word;
 }
 
 .delete-button {
-  background: transparent;
+  background: #ffe0e0;
   border: none;
-  font-size: 20px;
+  font-size: 18px;
   cursor: pointer;
-  padding: 5px;
-  transition: transform 0.2s;
+  padding: 8px 12px;
+  border-radius: 8px;
+  transition: all 0.2s;
+  flex-shrink: 0;
 }
 
 .delete-button:hover {
-  transform: scale(1.2);
+  background: #ffcccc;
+  transform: scale(1.1);
+}
+
+.product-details {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.product-details > div {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+}
+
+.product-description {
+  flex-direction: column;
+  align-items: stretch;
+}
+
+.label {
+  font-weight: 600;
+  color: #666;
+  font-size: 14px;
+}
+
+.value {
+  color: #333;
+  font-size: 15px;
+  font-weight: 500;
+}
+
+.product-description .value {
+  margin-top: 5px;
+  color: #666;
+  font-weight: 400;
+  line-height: 1.5;
+}
+
+.product-price .value {
+  color: #11998e;
+  font-size: 1.2rem;
+  font-weight: 700;
+}
+
+.product-total {
+  margin-top: 8px;
+  padding-top: 12px;
+  border-top: 2px solid #f0f0f0;
+}
+
+.product-total .value.highlight {
+  color: #11998e;
+  font-size: 1.3rem;
+  font-weight: 700;
 }
 
 .empty-state {
   text-align: center;
-  padding: 40px;
+  padding: 60px 20px;
   color: #999;
 }
 
@@ -144,20 +218,47 @@ h1 {
   font-size: 18px;
 }
 
-@media (max-width: 600px) {
-  .todo-container {
-    padding: 20px;
+@media (max-width: 768px) {
+  .product-container {
+    padding: 25px;
   }
 
   h1 {
     font-size: 2rem;
   }
 
-  .input-section {
+  .form-section {
+    padding: 20px;
+  }
+
+  .form-row {
     flex-direction: column;
   }
 
-  .add-button {
-    width: 100%;
+  .price-input,
+  .quantity-input {
+    max-width: 100%;
+  }
+
+  .product-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 480px) {
+  .app {
+    padding: 20px 10px;
+  }
+
+  .product-container {
+    padding: 20px;
+  }
+
+  h1 {
+    font-size: 1.8rem;
+  }
+
+  .product-name {
+    font-size: 1.1rem;
   }
 }
