@@ -3,6 +3,7 @@ import './App.css'
 
 const STORAGE_KEY = 'product-app-products'
 const SERIES_STORAGE_KEY = 'product-app-series'
+const MOLDS_STORAGE_KEY = 'product-app-molds'
 
 function App() {
   // Load products from localStorage on initial render
@@ -15,6 +16,12 @@ function App() {
   const [seriesData, setSeriesData] = useState(() => {
     const savedSeries = localStorage.getItem(SERIES_STORAGE_KEY)
     return savedSeries ? JSON.parse(savedSeries) : []
+  })
+
+  // Load molds from localStorage
+  const [moldsData, setMoldsData] = useState(() => {
+    const savedMolds = localStorage.getItem(MOLDS_STORAGE_KEY)
+    return savedMolds ? JSON.parse(savedMolds) : []
   })
 
   const [formData, setFormData] = useState({
@@ -33,12 +40,19 @@ function App() {
   const [editingId, setEditingId] = useState(null)
   const [newSeriesInput, setNewSeriesInput] = useState('')
   const [showNewSeriesInput, setShowNewSeriesInput] = useState(false)
-  const [activeView, setActiveView] = useState('overview') // 'overview', 'add', 'series', or 'addSeries'
+  const [activeView, setActiveView] = useState('overview') // 'overview', 'add', 'series', 'addSeries', 'molds', 'addMold'
 
   // Series management state
   const [editingSeriesId, setEditingSeriesId] = useState(null)
   const [seriesFormData, setSeriesFormData] = useState({
     name: '',
+    description: ''
+  })
+
+  // Mold management state
+  const [editingMoldId, setEditingMoldId] = useState(null)
+  const [moldFormData, setMoldFormData] = useState({
+    size: '',
     description: ''
   })
 
@@ -51,6 +65,11 @@ function App() {
   useEffect(() => {
     localStorage.setItem(SERIES_STORAGE_KEY, JSON.stringify(seriesData))
   }, [seriesData])
+
+  // Save molds to localStorage whenever they change
+  useEffect(() => {
+    localStorage.setItem(MOLDS_STORAGE_KEY, JSON.stringify(moldsData))
+  }, [moldsData])
 
   // Get all series (from seriesData and products)
   const getAllSeries = () => {
@@ -242,6 +261,104 @@ function App() {
     }
   }
 
+  // Mold Management Functions
+  const handleMoldInputChange = (e) => {
+    const { name, value } = e.target
+    setMoldFormData(prev => ({
+      ...prev,
+      [name]: value
+    }))
+  }
+
+  const addNewMold = () => {
+    if (moldFormData.size.trim() !== '') {
+      const newMold = {
+        id: Date.now(),
+        size: moldFormData.size.trim(),
+        description: moldFormData.description.trim()
+      }
+      setMoldsData([...moldsData, newMold])
+      setMoldFormData({ size: '', description: '' })
+      setActiveView('molds')
+    }
+  }
+
+  const editMold = (moldId) => {
+    const moldObj = moldsData.find(m => m.id === moldId)
+    if (moldObj) {
+      setMoldFormData({
+        size: moldObj.size,
+        description: moldObj.description || ''
+      })
+      setEditingMoldId(moldObj.id)
+    }
+  }
+
+  const updateMold = () => {
+    if (moldFormData.size.trim() !== '' && editingMoldId) {
+      const oldMold = moldsData.find(m => m.id === editingMoldId)
+      setMoldsData(moldsData.map(m =>
+        m.id === editingMoldId
+          ? { ...m, size: moldFormData.size.trim(), description: moldFormData.description.trim() }
+          : m
+      ))
+
+      // Update products using old mold size
+      if (oldMold && oldMold.size !== moldFormData.size.trim()) {
+        setProducts(products.map(product =>
+          product.size === oldMold.size
+            ? { ...product, size: moldFormData.size.trim() }
+            : product
+        ))
+      }
+
+      setEditingMoldId(null)
+      setMoldFormData({ size: '', description: '' })
+      setActiveView('molds')
+    }
+  }
+
+  const cancelMoldEdit = () => {
+    setEditingMoldId(null)
+    setMoldFormData({ size: '', description: '' })
+    if (activeView === 'addMold') {
+      setActiveView('molds')
+    }
+  }
+
+  const deleteMold = (moldId) => {
+    const moldObj = moldsData.find(m => m.id === moldId)
+    if (!moldObj) return
+
+    const productsUsingMold = products.filter(p => p.size === moldObj.size).length
+
+    if (productsUsingMold > 0) {
+      const confirmed = window.confirm(
+        `This mold size is used by ${productsUsingMold} tile(s). Deleting it will remove the size from all these tiles. Continue?`
+      )
+      if (!confirmed) return
+    }
+
+    setMoldsData(moldsData.filter(m => m.id !== moldId))
+
+    // Remove size from all products using this mold
+    setProducts(products.map(product =>
+      product.size === moldObj.size
+        ? { ...product, size: '' }
+        : product
+    ))
+  }
+
+  const handleMoldKeyPress = (e) => {
+    if (e.key === 'Enter') {
+      if (editingMoldId) {
+        updateMold()
+      } else {
+        addNewMold()
+      }
+    }
+  }
+
   const handleInputChange = (e) => {
     const { name, value } = e.target
     setFormData(prev => ({
@@ -404,6 +521,13 @@ function App() {
             <span>Manage Series</span>
           </button>
           <button
+            className={`nav-item ${activeView === 'molds' ? 'active' : ''}`}
+            onClick={() => setActiveView('molds')}
+          >
+            <span className="nav-icon">🔨</span>
+            <span>Manage Molds</span>
+          </button>
+          <button
             className={`nav-item ${activeView === 'add' ? 'active' : ''}`}
             onClick={() => setActiveView('add')}
           >
@@ -429,12 +553,16 @@ function App() {
               {activeView === 'overview' && 'Tile Inventory Dashboard'}
               {activeView === 'series' && 'Series Management'}
               {activeView === 'addSeries' && (editingSeriesId ? 'Edit Series' : 'Add New Series')}
+              {activeView === 'molds' && 'Mold Management'}
+              {activeView === 'addMold' && (editingMoldId ? 'Edit Mold' : 'Add New Mold')}
               {activeView === 'add' && (editingId ? 'Edit Tile' : 'Manage Tiles')}
             </h1>
             <p className="dashboard-subtitle">
               {activeView === 'overview' && 'Monitor and manage your tile inventory, packing, and palletizing'}
               {activeView === 'series' && 'Manage your tile series and categories'}
               {activeView === 'addSeries' && 'Fill in the series details below'}
+              {activeView === 'molds' && 'Manage available mold sizes for tile production'}
+              {activeView === 'addMold' && 'Fill in the mold size details below'}
               {activeView === 'add' && (editingId ? 'Edit tile details below' : 'Add or manage your tile inventory')}
             </p>
           </div>
@@ -753,6 +881,129 @@ function App() {
           </div>
         )}
 
+        {/* Mold Management View */}
+        {activeView === 'molds' && (
+          <div className="section">
+            <div className="section-header">
+              <h2 className="section-title">All Molds</h2>
+              <button
+                className="btn-primary"
+                onClick={() => setActiveView('addMold')}
+              >
+                ➕ Add Mold
+              </button>
+            </div>
+
+            {moldsData.length === 0 ? (
+              <div className="empty-state">
+                <div className="empty-icon">🔨</div>
+                <p className="empty-title">No molds yet</p>
+                <p className="empty-description">Add mold sizes available for production</p>
+                <button
+                  className="btn-primary"
+                  onClick={() => setActiveView('addMold')}
+                >
+                  Add Your First Mold
+                </button>
+              </div>
+            ) : (
+              <div className="product-grid">
+                {moldsData.map(mold => {
+                  const tilesUsingMold = products.filter(p => p.size === mold.size).length
+
+                  return (
+                    <div key={mold.id} className="product-card">
+                      <div className="product-header">
+                        <h3 className="product-name">{mold.size}</h3>
+                        <div className="product-actions">
+                          <button
+                            onClick={() => {
+                              editMold(mold.id)
+                              setActiveView('addMold')
+                            }}
+                            className="edit-button"
+                            title="Edit mold"
+                          >
+                            ✏️
+                          </button>
+                          <button
+                            onClick={() => deleteMold(mold.id)}
+                            className="delete-button"
+                            title="Delete mold"
+                          >
+                            🗑️
+                          </button>
+                        </div>
+                      </div>
+
+                      <div className="product-details">
+                        {mold.description && (
+                          <div className="product-description">
+                            <span className="label">Description:</span>
+                            <p className="value">{mold.description}</p>
+                          </div>
+                        )}
+
+                        <div className="product-quantity">
+                          <span className="label">Tiles Using:</span>
+                          <span className="value">{tilesUsingMold}</span>
+                        </div>
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Add/Edit Mold View */}
+        {activeView === 'addMold' && (
+          <div className="section">
+            <div className="form-section">
+              {editingMoldId && (
+                <div className="edit-mode-banner">
+                  ✏️ Editing Mold - Make changes and click Update
+                </div>
+              )}
+
+              <h2 className="section-title">{editingMoldId ? 'Edit Mold' : 'Add New Mold'}</h2>
+
+              <div className="form-row">
+                <input
+                  type="text"
+                  name="size"
+                  value={moldFormData.size}
+                  onChange={handleMoldInputChange}
+                  onKeyPress={handleMoldKeyPress}
+                  placeholder="Mold size (e.g., 12x12, 6x6) *"
+                  className="product-input"
+                />
+              </div>
+
+              <div className="form-row">
+                <input
+                  type="text"
+                  name="description"
+                  value={moldFormData.description}
+                  onChange={handleMoldInputChange}
+                  placeholder="Description (optional)"
+                  className="product-input description-input"
+                />
+              </div>
+
+              <div className="button-row">
+                <button onClick={editingMoldId ? updateMold : addNewMold} className="btn-primary">
+                  {editingMoldId ? '✓ Update Mold' : '+ Add Mold'}
+                </button>
+                <button onClick={cancelMoldEdit} className="btn-secondary">
+                  ✕ Cancel
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Add/Edit View */}
         {activeView === 'add' && (
           <div className="section">
@@ -776,15 +1027,17 @@ function App() {
                   className="product-input"
                 />
 
-                <input
-                  type="text"
+                <select
                   name="size"
                   value={formData.size}
                   onChange={handleInputChange}
-                  onKeyPress={handleKeyPress}
-                  placeholder="Size (e.g., 12x12, 6x6)"
                   className="product-input"
-                />
+                >
+                  <option value="">Select Mold Size</option>
+                  {moldsData.map(mold => (
+                    <option key={mold.id} value={mold.size}>{mold.size}</option>
+                  ))}
+                </select>
               </div>
 
               <div className="form-row">
