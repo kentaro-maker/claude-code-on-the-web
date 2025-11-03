@@ -1,9 +1,20 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import './App.css'
 
+const STORAGE_KEY = 'todo-app-todos'
+
 function App() {
-  const [todos, setTodos] = useState([])
+  // Load todos from localStorage on initial render
+  const [todos, setTodos] = useState(() => {
+    const savedTodos = localStorage.getItem(STORAGE_KEY)
+    return savedTodos ? JSON.parse(savedTodos) : []
+  })
   const [inputValue, setInputValue] = useState('')
+
+  // Save todos to localStorage whenever they change
+  useEffect(() => {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(todos))
+  }, [todos])
 
   const addTodo = () => {
     if (inputValue.trim() !== '') {
