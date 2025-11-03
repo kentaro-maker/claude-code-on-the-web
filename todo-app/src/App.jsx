@@ -407,8 +407,8 @@ function App() {
             className={`nav-item ${activeView === 'add' ? 'active' : ''}`}
             onClick={() => setActiveView('add')}
           >
-            <span className="nav-icon">➕</span>
-            <span>{editingId ? 'Edit Tile' : 'Add Tile'}</span>
+            <span className="nav-icon">🏗️</span>
+            <span>Manage Tiles</span>
           </button>
         </nav>
 
@@ -429,13 +429,13 @@ function App() {
               {activeView === 'overview' && 'Tile Inventory Dashboard'}
               {activeView === 'series' && 'Series Management'}
               {activeView === 'addSeries' && (editingSeriesId ? 'Edit Series' : 'Add New Series')}
-              {activeView === 'add' && (editingId ? 'Edit Tile' : 'Add New Tile')}
+              {activeView === 'add' && (editingId ? 'Edit Tile' : 'Manage Tiles')}
             </h1>
             <p className="dashboard-subtitle">
               {activeView === 'overview' && 'Monitor and manage your tile inventory, packing, and palletizing'}
               {activeView === 'series' && 'Manage your tile series and categories'}
               {activeView === 'addSeries' && 'Fill in the series details below'}
-              {activeView === 'add' && 'Fill in the tile details below'}
+              {activeView === 'add' && (editingId ? 'Edit tile details below' : 'Add or manage your tile inventory')}
             </p>
           </div>
         </header>
@@ -759,11 +759,11 @@ function App() {
             <div className="form-section">
               {editingId && (
                 <div className="edit-mode-banner">
-                  ✏️ Editing Product - Make changes and click Update
+                  ✏️ Editing Tile - Make changes and click Update
                 </div>
               )}
 
-              <h2 className="section-title">{editingId ? 'Edit Product' : 'Add New Product'}</h2>
+              <h2 className="section-title">{editingId ? 'Edit Tile' : 'Add New Tile'}</h2>
 
               <div className="form-row">
                 <input
