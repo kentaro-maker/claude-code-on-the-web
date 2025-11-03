@@ -2,12 +2,19 @@ import { useState, useEffect } from 'react'
 import './App.css'
 
 const STORAGE_KEY = 'product-app-products'
+const SERIES_STORAGE_KEY = 'product-app-series'
 
 function App() {
   // Load products from localStorage on initial render
   const [products, setProducts] = useState(() => {
     const savedProducts = localStorage.getItem(STORAGE_KEY)
     return savedProducts ? JSON.parse(savedProducts) : []
+  })
+
+  // Load series from localStorage
+  const [seriesData, setSeriesData] = useState(() => {
+    const savedSeries = localStorage.getItem(SERIES_STORAGE_KEY)
+    return savedSeries ? JSON.parse(savedSeries) : []
   })
 
   const [formData, setFormData] = useState({
@@ -21,22 +28,35 @@ function App() {
   const [editingId, setEditingId] = useState(null)
   const [newSeriesInput, setNewSeriesInput] = useState('')
   const [showNewSeriesInput, setShowNewSeriesInput] = useState(false)
-  const [activeView, setActiveView] = useState('overview') // 'overview', 'add', or 'series'
+  const [activeView, setActiveView] = useState('overview') // 'overview', 'add', 'series', or 'addSeries'
 
   // Series management state
-  const [editingSeriesName, setEditingSeriesName] = useState(null)
-  const [seriesFormName, setSeriesFormName] = useState('')
+  const [editingSeriesId, setEditingSeriesId] = useState(null)
+  const [seriesFormData, setSeriesFormData] = useState({
+    name: '',
+    description: ''
+  })
 
   // Save products to localStorage whenever they change
   useEffect(() => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(products))
   }, [products])
 
-  // Get unique series from existing products
-  const getUniqueSeries = () => {
-    const seriesSet = new Set(products.map(p => p.series).filter(s => s))
-    return Array.from(seriesSet).sort()
+  // Save series to localStorage whenever they change
+  useEffect(() => {
+    localStorage.setItem(SERIES_STORAGE_KEY, JSON.stringify(seriesData))
+  }, [seriesData])
+
+  // Get all series (from seriesData and products)
+  const getAllSeries = () => {
+    const productSeries = new Set(products.map(p => p.series).filter(s => s))
+    const manualSeries = seriesData.map(s => s.name)
+    const allSeries = new Set([...productSeries, ...manualSeries])
+    return Array.from(allSeries).sort()
   }
+
+  // Get unique series from existing products (for backwards compatibility)
+  const getUniqueSeries = getAllSeries
 
   // Calculate dashboard metrics
   const getMetrics = () => {
@@ -66,31 +86,99 @@ function App() {
   }
 
   // Series Management Functions
-  const editSeries = (seriesName) => {
-    setEditingSeriesName(seriesName)
-    setSeriesFormName(seriesName)
+  const handleSeriesInputChange = (e) => {
+    const { name, value } = e.target
+    setSeriesFormData(prev => ({
+      ...prev,
+      [name]: value
+    }))
   }
 
-  const saveSeries = () => {
-    if (seriesFormName.trim() !== '' && editingSeriesName) {
-      // Update all products with the old series name to use the new name
-      setProducts(products.map(product =>
-        product.series === editingSeriesName
-          ? { ...product, series: seriesFormName.trim() }
-          : product
-      ))
-      setEditingSeriesName(null)
-      setSeriesFormName('')
+  const addNewSeries = () => {
+    if (seriesFormData.name.trim() !== '') {
+      const newSeries = {
+        id: Date.now(),
+        name: seriesFormData.name.trim(),
+        description: seriesFormData.description.trim()
+      }
+      setSeriesData([...seriesData, newSeries])
+      setSeriesFormData({ name: '', description: '' })
+      setActiveView('series')
+    }
+  }
+
+  const editSeries = (series) => {
+    const seriesObj = seriesData.find(s => s.name === series)
+    if (seriesObj) {
+      setSeriesFormData({
+        name: seriesObj.name,
+        description: seriesObj.description || ''
+      })
+      setEditingSeriesId(seriesObj.id)
+    } else {
+      // This is a product-only series, create it
+      setSeriesFormData({
+        name: series,
+        description: ''
+      })
+      setEditingSeriesId('product-' + series)
+    }
+  }
+
+  const updateSeries = () => {
+    if (seriesFormData.name.trim() !== '' && editingSeriesId) {
+      if (typeof editingSeriesId === 'number') {
+        // Update existing series in seriesData
+        const oldSeries = seriesData.find(s => s.id === editingSeriesId)
+        setSeriesData(seriesData.map(s =>
+          s.id === editingSeriesId
+            ? { ...s, name: seriesFormData.name.trim(), description: seriesFormData.description.trim() }
+            : s
+        ))
+
+        // Update products using old series name
+        if (oldSeries && oldSeries.name !== seriesFormData.name.trim()) {
+          setProducts(products.map(product =>
+            product.series === oldSeries.name
+              ? { ...product, series: seriesFormData.name.trim() }
+              : product
+          ))
+        }
+      } else {
+        // This was a product-only series, now add it to seriesData
+        const oldName = editingSeriesId.replace('product-', '')
+        const newSeries = {
+          id: Date.now(),
+          name: seriesFormData.name.trim(),
+          description: seriesFormData.description.trim()
+        }
+        setSeriesData([...seriesData, newSeries])
+
+        // Update products using old series name if name changed
+        if (oldName !== seriesFormData.name.trim()) {
+          setProducts(products.map(product =>
+            product.series === oldName
+              ? { ...product, series: seriesFormData.name.trim() }
+              : product
+          ))
+        }
+      }
+      setEditingSeriesId(null)
+      setSeriesFormData({ name: '', description: '' })
     }
   }
 
   const cancelSeriesEdit = () => {
-    setEditingSeriesName(null)
-    setSeriesFormName('')
+    setEditingSeriesId(null)
+    setSeriesFormData({ name: '', description: '' })
+    if (activeView === 'addSeries') {
+      setActiveView('series')
+    }
   }
 
   const deleteSeries = (seriesName) => {
     const productsUsingSeries = products.filter(p => p.series === seriesName).length
+    const seriesObj = seriesData.find(s => s.name === seriesName)
 
     if (productsUsingSeries > 0) {
       const confirmed = window.confirm(
@@ -99,12 +187,27 @@ function App() {
       if (!confirmed) return
     }
 
+    // Remove from seriesData if it exists there
+    if (seriesObj) {
+      setSeriesData(seriesData.filter(s => s.id !== seriesObj.id))
+    }
+
     // Remove series from all products
     setProducts(products.map(product =>
       product.series === seriesName
         ? { ...product, series: '' }
         : product
     ))
+  }
+
+  const handleSeriesKeyPress = (e) => {
+    if (e.key === 'Enter') {
+      if (editingSeriesId) {
+        updateSeries()
+      } else {
+        addNewSeries()
+      }
+    }
   }
 
   const handleInputChange = (e) => {
@@ -217,12 +320,6 @@ function App() {
     }
   }
 
-  const handleSeriesKeyPress = (e) => {
-    if (e.key === 'Enter') {
-      saveSeries()
-    }
-  }
-
   const metrics = getMetrics()
   const uniqueSeries = getUniqueSeries()
 
@@ -274,11 +371,13 @@ function App() {
             <h1 className="dashboard-title">
               {activeView === 'overview' && 'Product Management Dashboard'}
               {activeView === 'series' && 'Series Management'}
+              {activeView === 'addSeries' && (editingSeriesId ? 'Edit Series' : 'Add New Series')}
               {activeView === 'add' && (editingId ? 'Edit Product' : 'Add New Product')}
             </h1>
             <p className="dashboard-subtitle">
               {activeView === 'overview' && 'Monitor and manage your product inventory'}
               {activeView === 'series' && 'Manage your product series and categories'}
+              {activeView === 'addSeries' && 'Fill in the series details below'}
               {activeView === 'add' && 'Fill in the product details below'}
             </p>
           </div>
@@ -450,74 +549,114 @@ function App() {
           <div className="section">
             <div className="section-header">
               <h2 className="section-title">All Series</h2>
+              <button
+                className="btn-primary"
+                onClick={() => setActiveView('addSeries')}
+              >
+                ➕ Add Series
+              </button>
             </div>
 
             {uniqueSeries.length === 0 ? (
               <div className="empty-state">
                 <div className="empty-icon">🏷️</div>
                 <p className="empty-title">No series yet</p>
-                <p className="empty-description">Series are created automatically when you add products</p>
+                <p className="empty-description">Create series to organize your products</p>
                 <button
                   className="btn-primary"
-                  onClick={() => setActiveView('add')}
+                  onClick={() => setActiveView('addSeries')}
                 >
-                  Add Your First Product
+                  Add Your First Series
                 </button>
               </div>
             ) : (
               <div className="series-management-grid">
-                {uniqueSeries.map(series => (
-                  <div key={series} className="series-management-card">
-                    {editingSeriesName === series ? (
-                      <div className="series-edit-form">
-                        <input
-                          type="text"
-                          value={seriesFormName}
-                          onChange={(e) => setSeriesFormName(e.target.value)}
-                          onKeyPress={handleSeriesKeyPress}
-                          className="product-input"
-                          placeholder="Series name"
-                          autoFocus
-                        />
-                        <div className="series-edit-actions">
-                          <button onClick={saveSeries} className="btn-save">
-                            ✓ Save
-                          </button>
-                          <button onClick={cancelSeriesEdit} className="btn-cancel">
-                            ✕ Cancel
-                          </button>
-                        </div>
+                {uniqueSeries.map(series => {
+                  const seriesObj = seriesData.find(s => s.name === series)
+                  const productCount = metrics.seriesBreakdown[series] || 0
+
+                  return (
+                    <div key={series} className="series-management-card">
+                      <div className="series-info">
+                        <h3 className="series-management-name">{series}</h3>
+                        {seriesObj && seriesObj.description && (
+                          <p className="series-description">{seriesObj.description}</p>
+                        )}
+                        <p className="series-product-count">
+                          {productCount} product{productCount !== 1 ? 's' : ''}
+                        </p>
                       </div>
-                    ) : (
-                      <>
-                        <div className="series-info">
-                          <h3 className="series-management-name">{series}</h3>
-                          <p className="series-product-count">
-                            {metrics.seriesBreakdown[series]} product{metrics.seriesBreakdown[series] !== 1 ? 's' : ''}
-                          </p>
-                        </div>
-                        <div className="series-actions">
-                          <button
-                            onClick={() => editSeries(series)}
-                            className="edit-button"
-                            title="Rename series"
-                          >
-                            ✏️ Rename
-                          </button>
-                          <button
-                            onClick={() => deleteSeries(series)}
-                            className="delete-button"
-                            title="Delete series"
-                          >
-                            🗑️ Delete
-                          </button>
-                        </div>
-                      </>
-                    )}
-                  </div>
-                ))}
+                      <div className="series-actions">
+                        <button
+                          onClick={() => {
+                            editSeries(series)
+                            setActiveView('addSeries')
+                          }}
+                          className="edit-button"
+                          title="Edit series"
+                        >
+                          ✏️ Edit
+                        </button>
+                        <button
+                          onClick={() => deleteSeries(series)}
+                          className="delete-button"
+                          title="Delete series"
+                        >
+                          🗑️ Delete
+                        </button>
+                      </div>
+                    </div>
+                  )
+                })}
               </div>
             )}
+          </div>
+        )}
+
+        {/* Add/Edit Series View */}
+        {activeView === 'addSeries' && (
+          <div className="section">
+            <div className="form-section">
+              {editingSeriesId && (
+                <div className="edit-mode-banner">
+                  ✏️ Editing Series - Make changes and click Update
+                </div>
+              )}
+
+              <h2 className="section-title">{editingSeriesId ? 'Edit Series' : 'Add New Series'}</h2>
+
+              <div className="form-row">
+                <input
+                  type="text"
+                  name="name"
+                  value={seriesFormData.name}
+                  onChange={handleSeriesInputChange}
+                  onKeyPress={handleSeriesKeyPress}
+                  placeholder="Series name *"
+                  className="product-input"
+                />
+              </div>
+
+              <div className="form-row">
+                <input
+                  type="text"
+                  name="description"
+                  value={seriesFormData.description}
+                  onChange={handleSeriesInputChange}
+                  placeholder="Description (optional)"
+                  className="product-input description-input"
+                />
+              </div>
+
+              <div className="button-row">
+                <button onClick={editingSeriesId ? updateSeries : addNewSeries} className="btn-primary">
+                  {editingSeriesId ? '✓ Update Series' : '+ Add Series'}
+                </button>
+                <button onClick={cancelSeriesEdit} className="btn-secondary">
+                  ✕ Cancel
+                </button>
+              </div>
+            </div>
           </div>
         )}
 

@@ -554,6 +554,13 @@
   font-size: 14px;
 }
 
+.series-description {
+  color: #64748b;
+  margin: 8px 0;
+  font-size: 14px;
+  line-height: 1.4;
+}
+
 .series-actions {
   display: flex;
   gap: 10px;
