@@ -21,6 +21,7 @@ function App() {
   const [editingId, setEditingId] = useState(null)
   const [newSeriesInput, setNewSeriesInput] = useState('')
   const [showNewSeriesInput, setShowNewSeriesInput] = useState(false)
+  const [activeView, setActiveView] = useState('overview') // 'overview' or 'add'
 
   // Save products to localStorage whenever they change
   useEffect(() => {
@@ -31,6 +32,33 @@ function App() {
   const getUniqueSeries = () => {
     const seriesSet = new Set(products.map(p => p.series).filter(s => s))
     return Array.from(seriesSet).sort()
+  }
+
+  // Calculate dashboard metrics
+  const getMetrics = () => {
+    const totalValue = products.reduce((sum, p) => sum + (p.price * p.quantity), 0)
+    const totalQuantity = products.reduce((sum, p) => sum + p.quantity, 0)
+    const uniqueSeries = getUniqueSeries().length
+    const avgPrice = products.length > 0
+      ? products.reduce((sum, p) => sum + p.price, 0) / products.length
+      : 0
+    const lowStock = products.filter(p => p.quantity > 0 && p.quantity < 10).length
+
+    const seriesBreakdown = products.reduce((acc, p) => {
+      if (p.series) {
+        acc[p.series] = (acc[p.series] || 0) + 1
+      }
+      return acc
+    }, {})
+
+    return {
+      totalValue,
+      totalQuantity,
+      uniqueSeries,
+      avgPrice,
+      lowStock,
+      seriesBreakdown
+    }
   }
 
   const handleInputChange = (e) => {
@@ -97,6 +125,7 @@ function App() {
       })
       setShowNewSeriesInput(false)
       setNewSeriesInput('')
+      setActiveView('overview')
     }
   }
 
@@ -111,7 +140,7 @@ function App() {
     setEditingId(product.id)
     setShowNewSeriesInput(false)
     setNewSeriesInput('')
-    // Scroll to form
+    setActiveView('add')
     window.scrollTo({ top: 0, behavior: 'smooth' })
   }
 
@@ -126,6 +155,7 @@ function App() {
     })
     setShowNewSeriesInput(false)
     setNewSeriesInput('')
+    setActiveView('overview')
   }
 
   const deleteProduct = (id) => {
@@ -141,169 +171,301 @@ function App() {
     }
   }
 
-  const totalValue = products.reduce((sum, product) => sum + (product.price * product.quantity), 0)
+  const metrics = getMetrics()
   const uniqueSeries = getUniqueSeries()
 
   return (
-    <div className="app">
-      <div className="product-container">
-        <h1>🛍️ Product Manager</h1>
+    <div className="dashboard">
+      {/* Sidebar */}
+      <aside className="sidebar">
+        <div className="sidebar-header">
+          <h2 className="sidebar-title">📦 Product Hub</h2>
+        </div>
 
-        <div className="form-section">
-          {editingId && (
-            <div className="edit-mode-banner">
-              ✏️ Editing Product - Make changes and click Update
+        <nav className="sidebar-nav">
+          <button
+            className={`nav-item ${activeView === 'overview' ? 'active' : ''}`}
+            onClick={() => setActiveView('overview')}
+          >
+            <span className="nav-icon">📊</span>
+            <span>Dashboard</span>
+          </button>
+          <button
+            className={`nav-item ${activeView === 'add' ? 'active' : ''}`}
+            onClick={() => setActiveView('add')}
+          >
+            <span className="nav-icon">➕</span>
+            <span>{editingId ? 'Edit Product' : 'Add Product'}</span>
+          </button>
+        </nav>
+
+        <div className="sidebar-footer">
+          <div className="quick-stats">
+            <p className="quick-stat-label">Total Products</p>
+            <p className="quick-stat-value">{products.length}</p>
+          </div>
+        </div>
+      </aside>
+
+      {/* Main Content */}
+      <main className="main-content">
+        {/* Header */}
+        <header className="dashboard-header">
+          <div>
+            <h1 className="dashboard-title">Product Management Dashboard</h1>
+            <p className="dashboard-subtitle">Monitor and manage your product inventory</p>
+          </div>
+        </header>
+
+        {/* Overview View */}
+        {activeView === 'overview' && (
+          <>
+            {/* Metrics Cards */}
+            <div className="metrics-grid">
+              <div className="metric-card">
+                <div className="metric-icon">💰</div>
+                <div className="metric-content">
+                  <p className="metric-label">Total Value</p>
+                  <p className="metric-value">${metrics.totalValue.toFixed(2)}</p>
+                </div>
+              </div>
+
+              <div className="metric-card">
+                <div className="metric-icon">📦</div>
+                <div className="metric-content">
+                  <p className="metric-label">Total Products</p>
+                  <p className="metric-value">{products.length}</p>
+                </div>
+              </div>
+
+              <div className="metric-card">
+                <div className="metric-icon">📊</div>
+                <div className="metric-content">
+                  <p className="metric-label">Total Quantity</p>
+                  <p className="metric-value">{metrics.totalQuantity}</p>
+                </div>
+              </div>
+
+              <div className="metric-card">
+                <div className="metric-icon">💵</div>
+                <div className="metric-content">
+                  <p className="metric-label">Avg Price</p>
+                  <p className="metric-value">${metrics.avgPrice.toFixed(2)}</p>
+                </div>
+              </div>
+
+              <div className="metric-card">
+                <div className="metric-icon">🏷️</div>
+                <div className="metric-content">
+                  <p className="metric-label">Series Count</p>
+                  <p className="metric-value">{metrics.uniqueSeries}</p>
+                </div>
+              </div>
+
+              <div className="metric-card alert">
+                <div className="metric-icon">⚠️</div>
+                <div className="metric-content">
+                  <p className="metric-label">Low Stock</p>
+                  <p className="metric-value">{metrics.lowStock}</p>
+                </div>
+              </div>
             </div>
-          )}
 
-          <div className="form-row">
-            <input
-              type="text"
-              name="name"
-              value={formData.name}
-              onChange={handleInputChange}
-              onKeyPress={handleKeyPress}
-              placeholder="Product name *"
-              className="product-input"
-            />
+            {/* Series Breakdown */}
+            {uniqueSeries.length > 0 && (
+              <div className="section">
+                <h2 className="section-title">Series Breakdown</h2>
+                <div className="series-breakdown">
+                  {uniqueSeries.map(series => (
+                    <div key={series} className="series-item">
+                      <span className="series-name">{series}</span>
+                      <span className="series-count">{metrics.seriesBreakdown[series]} products</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
 
-            <div className="series-select-container">
-              <select
-                name="series"
-                value={showNewSeriesInput ? '__new__' : formData.series}
-                onChange={handleSeriesChange}
-                className="product-input series-select"
-              >
-                <option value="">Select Series/Category</option>
-                {uniqueSeries.map(series => (
-                  <option key={series} value={series}>{series}</option>
-                ))}
-                <option value="__new__">+ Add New Series</option>
-              </select>
+            {/* Products Table */}
+            <div className="section">
+              <div className="section-header">
+                <h2 className="section-title">All Products</h2>
+                <button
+                  className="btn-primary"
+                  onClick={() => setActiveView('add')}
+                >
+                  ➕ Add Product
+                </button>
+              </div>
 
-              {showNewSeriesInput && (
-                <input
-                  type="text"
-                  value={newSeriesInput}
-                  onChange={handleNewSeriesChange}
-                  onKeyPress={handleKeyPress}
-                  placeholder="Enter new series name"
-                  className="product-input new-series-input"
-                  autoFocus
-                />
+              {products.length === 0 ? (
+                <div className="empty-state">
+                  <div className="empty-icon">📦</div>
+                  <p className="empty-title">No products yet</p>
+                  <p className="empty-description">Get started by adding your first product</p>
+                  <button
+                    className="btn-primary"
+                    onClick={() => setActiveView('add')}
+                  >
+                    Add Your First Product
+                  </button>
+                </div>
+              ) : (
+                <div className="product-grid">
+                  {products.map(product => (
+                    <div key={product.id} className="product-card">
+                      <div className="product-header">
+                        <h3 className="product-name">{product.name}</h3>
+                        <div className="product-actions">
+                          <button onClick={() => editProduct(product)} className="edit-button" title="Edit product">
+                            ✏️
+                          </button>
+                          <button onClick={() => deleteProduct(product.id)} className="delete-button" title="Delete product">
+                            🗑️
+                          </button>
+                        </div>
+                      </div>
+
+                      <div className="product-details">
+                        {product.series && (
+                          <div className="product-series">
+                            <span className="series-badge">{product.series}</span>
+                          </div>
+                        )}
+
+                        <div className="product-price">
+                          <span className="label">Price:</span>
+                          <span className="value">${product.price.toFixed(2)}</span>
+                        </div>
+
+                        {product.quantity > 0 && (
+                          <div className="product-quantity">
+                            <span className="label">Quantity:</span>
+                            <span className={`value ${product.quantity < 10 ? 'low-stock' : ''}`}>
+                              {product.quantity}
+                              {product.quantity < 10 && <span className="low-stock-badge">Low</span>}
+                            </span>
+                          </div>
+                        )}
+
+                        {product.description && (
+                          <div className="product-description">
+                            <span className="label">Description:</span>
+                            <p className="value">{product.description}</p>
+                          </div>
+                        )}
+
+                        {product.quantity > 0 && (
+                          <div className="product-total">
+                            <span className="label">Total:</span>
+                            <span className="value highlight">${(product.price * product.quantity).toFixed(2)}</span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
               )}
             </div>
+          </>
+        )}
 
-            <input
-              type="number"
-              name="price"
-              value={formData.price}
-              onChange={handleInputChange}
-              onKeyPress={handleKeyPress}
-              placeholder="Price *"
-              className="product-input price-input"
-              step="0.01"
-              min="0"
-            />
-          </div>
-
-          <div className="form-row">
-            <input
-              type="number"
-              name="quantity"
-              value={formData.quantity}
-              onChange={handleInputChange}
-              onKeyPress={handleKeyPress}
-              placeholder="Quantity"
-              className="product-input quantity-input"
-              min="0"
-            />
-            <input
-              type="text"
-              name="description"
-              value={formData.description}
-              onChange={handleInputChange}
-              placeholder="Description (optional)"
-              className="product-input description-input"
-            />
-          </div>
-
-          <div className="button-row">
-            <button onClick={saveProduct} className="add-button">
-              {editingId ? '✓ Update Product' : '+ Add Product'}
-            </button>
-            {editingId && (
-              <button onClick={cancelEdit} className="cancel-button">
-                ✕ Cancel
-              </button>
-            )}
-          </div>
-        </div>
-
-        <div className="stats">
-          {products.length > 0 && (
-            <p>{products.length} products • Total value: ${totalValue.toFixed(2)}</p>
-          )}
-        </div>
-
-        <div className="product-grid">
-          {products.map(product => (
-            <div key={product.id} className={`product-card ${editingId === product.id ? 'editing' : ''}`}>
-              <div className="product-header">
-                <h3 className="product-name">{product.name}</h3>
-                <div className="product-actions">
-                  <button onClick={() => editProduct(product)} className="edit-button" title="Edit product">
-                    ✏️
-                  </button>
-                  <button onClick={() => deleteProduct(product.id)} className="delete-button" title="Delete product">
-                    🗑️
-                  </button>
+        {/* Add/Edit View */}
+        {activeView === 'add' && (
+          <div className="section">
+            <div className="form-section">
+              {editingId && (
+                <div className="edit-mode-banner">
+                  ✏️ Editing Product - Make changes and click Update
                 </div>
+              )}
+
+              <h2 className="section-title">{editingId ? 'Edit Product' : 'Add New Product'}</h2>
+
+              <div className="form-row">
+                <input
+                  type="text"
+                  name="name"
+                  value={formData.name}
+                  onChange={handleInputChange}
+                  onKeyPress={handleKeyPress}
+                  placeholder="Product name *"
+                  className="product-input"
+                />
+
+                <div className="series-select-container">
+                  <select
+                    name="series"
+                    value={showNewSeriesInput ? '__new__' : formData.series}
+                    onChange={handleSeriesChange}
+                    className="product-input series-select"
+                  >
+                    <option value="">Select Series/Category</option>
+                    {uniqueSeries.map(series => (
+                      <option key={series} value={series}>{series}</option>
+                    ))}
+                    <option value="__new__">+ Add New Series</option>
+                  </select>
+
+                  {showNewSeriesInput && (
+                    <input
+                      type="text"
+                      value={newSeriesInput}
+                      onChange={handleNewSeriesChange}
+                      onKeyPress={handleKeyPress}
+                      placeholder="Enter new series name"
+                      className="product-input new-series-input"
+                      autoFocus
+                    />
+                  )}
+                </div>
+
+                <input
+                  type="number"
+                  name="price"
+                  value={formData.price}
+                  onChange={handleInputChange}
+                  onKeyPress={handleKeyPress}
+                  placeholder="Price *"
+                  className="product-input price-input"
+                  step="0.01"
+                  min="0"
+                />
               </div>
 
-              <div className="product-details">
-                {product.series && (
-                  <div className="product-series">
-                    <span className="series-badge">{product.series}</span>
-                  </div>
-                )}
+              <div className="form-row">
+                <input
+                  type="number"
+                  name="quantity"
+                  value={formData.quantity}
+                  onChange={handleInputChange}
+                  onKeyPress={handleKeyPress}
+                  placeholder="Quantity"
+                  className="product-input quantity-input"
+                  min="0"
+                />
+                <input
+                  type="text"
+                  name="description"
+                  value={formData.description}
+                  onChange={handleInputChange}
+                  placeholder="Description (optional)"
+                  className="product-input description-input"
+                />
+              </div>
 
-                <div className="product-price">
-                  <span className="label">Price:</span>
-                  <span className="value">${product.price.toFixed(2)}</span>
-                </div>
-
-                {product.quantity > 0 && (
-                  <div className="product-quantity">
-                    <span className="label">Quantity:</span>
-                    <span className="value">{product.quantity}</span>
-                  </div>
-                )}
-
-                {product.description && (
-                  <div className="product-description">
-                    <span className="label">Description:</span>
-                    <p className="value">{product.description}</p>
-                  </div>
-                )}
-
-                {product.quantity > 0 && (
-                  <div className="product-total">
-                    <span className="label">Total:</span>
-                    <span className="value highlight">${(product.price * product.quantity).toFixed(2)}</span>
-                  </div>
-                )}
+              <div className="button-row">
+                <button onClick={saveProduct} className="btn-primary">
+                  {editingId ? '✓ Update Product' : '+ Add Product'}
+                </button>
+                <button onClick={cancelEdit} className="btn-secondary">
+                  ✕ Cancel
+                </button>
               </div>
             </div>
-          ))}
-        </div>
-
-        {products.length === 0 && (
-          <div className="empty-state">
-            <p>No products yet. Add your first product to get started!</p>
           </div>
         )}
-      </div>
+      </main>
     </div>
   )
 }
