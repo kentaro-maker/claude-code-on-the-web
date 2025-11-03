@@ -13,6 +13,7 @@ function App() {
   const [formData, setFormData] = useState({
     name: '',
     price: '',
+    series: '',
     description: '',
     quantity: ''
   })
@@ -36,6 +37,7 @@ function App() {
         id: Date.now(),
         name: formData.name,
         price: parseFloat(formData.price),
+        series: formData.series,
         description: formData.description,
         quantity: formData.quantity ? parseInt(formData.quantity) : 0
       }
@@ -43,6 +45,7 @@ function App() {
       setFormData({
         name: '',
         price: '',
+        series: '',
         description: '',
         quantity: ''
       })
@@ -76,6 +79,15 @@ function App() {
               onKeyPress={handleKeyPress}
               placeholder="Product name *"
               className="product-input"
+            />
+            <input
+              type="text"
+              name="series"
+              value={formData.series}
+              onChange={handleInputChange}
+              onKeyPress={handleKeyPress}
+              placeholder="Series/Category"
+              className="product-input series-input"
             />
             <input
               type="number"
@@ -133,6 +145,12 @@ function App() {
               </div>
 
               <div className="product-details">
+                {product.series && (
+                  <div className="product-series">
+                    <span className="series-badge">{product.series}</span>
+                  </div>
+                )}
+
                 <div className="product-price">
                   <span className="label">Price:</span>
                   <span className="value">${product.price.toFixed(2)}</span>

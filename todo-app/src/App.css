@@ -52,6 +52,10 @@ h1 {
   border-color: #11998e;
 }
 
+.series-input {
+  max-width: 200px;
+}
+
 .price-input {
   max-width: 150px;
 }
@@ -159,6 +163,23 @@ h1 {
   gap: 12px;
 }
 
+.product-series {
+  display: block;
+  margin-bottom: 8px;
+}
+
+.series-badge {
+  display: inline-block;
+  background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+  color: white;
+  padding: 6px 14px;
+  border-radius: 20px;
+  font-size: 13px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
 .product-details > div {
   display: flex;
   justify-content: space-between;
@@ -235,6 +256,7 @@ h1 {
     flex-direction: column;
   }
 
+  .series-input,
   .price-input,
   .quantity-input {
     max-width: 100%;
