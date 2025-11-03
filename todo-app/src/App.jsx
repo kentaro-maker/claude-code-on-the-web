@@ -18,10 +18,20 @@ function App() {
     quantity: ''
   })
 
+  const [editingId, setEditingId] = useState(null)
+  const [newSeriesInput, setNewSeriesInput] = useState('')
+  const [showNewSeriesInput, setShowNewSeriesInput] = useState(false)
+
   // Save products to localStorage whenever they change
   useEffect(() => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(products))
   }, [products])
+
+  // Get unique series from existing products
+  const getUniqueSeries = () => {
+    const seriesSet = new Set(products.map(p => p.series).filter(s => s))
+    return Array.from(seriesSet).sort()
+  }
 
   const handleInputChange = (e) => {
     const { name, value } = e.target
@@ -31,17 +41,53 @@ function App() {
     }))
   }
 
-  const addProduct = () => {
+  const handleSeriesChange = (e) => {
+    const value = e.target.value
+    if (value === '__new__') {
+      setShowNewSeriesInput(true)
+      setFormData(prev => ({ ...prev, series: '' }))
+    } else {
+      setShowNewSeriesInput(false)
+      setFormData(prev => ({ ...prev, series: value }))
+    }
+  }
+
+  const handleNewSeriesChange = (e) => {
+    setNewSeriesInput(e.target.value)
+    setFormData(prev => ({ ...prev, series: e.target.value }))
+  }
+
+  const saveProduct = () => {
     if (formData.name.trim() !== '' && formData.price.trim() !== '') {
-      const newProduct = {
-        id: Date.now(),
-        name: formData.name,
-        price: parseFloat(formData.price),
-        series: formData.series,
-        description: formData.description,
-        quantity: formData.quantity ? parseInt(formData.quantity) : 0
+      if (editingId) {
+        // Update existing product
+        setProducts(products.map(product =>
+          product.id === editingId
+            ? {
+                ...product,
+                name: formData.name,
+                price: parseFloat(formData.price),
+                series: formData.series,
+                description: formData.description,
+                quantity: formData.quantity ? parseInt(formData.quantity) : 0
+              }
+            : product
+        ))
+        setEditingId(null)
+      } else {
+        // Add new product
+        const newProduct = {
+          id: Date.now(),
+          name: formData.name,
+          price: parseFloat(formData.price),
+          series: formData.series,
+          description: formData.description,
+          quantity: formData.quantity ? parseInt(formData.quantity) : 0
+        }
+        setProducts([...products, newProduct])
       }
-      setProducts([...products, newProduct])
+
+      // Reset form
       setFormData({
         name: '',
         price: '',
@@ -49,20 +95,54 @@ function App() {
         description: '',
         quantity: ''
       })
+      setShowNewSeriesInput(false)
+      setNewSeriesInput('')
     }
+  }
+
+  const editProduct = (product) => {
+    setFormData({
+      name: product.name,
+      price: product.price.toString(),
+      series: product.series || '',
+      description: product.description || '',
+      quantity: product.quantity.toString()
+    })
+    setEditingId(product.id)
+    setShowNewSeriesInput(false)
+    setNewSeriesInput('')
+    // Scroll to form
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+  }
+
+  const cancelEdit = () => {
+    setEditingId(null)
+    setFormData({
+      name: '',
+      price: '',
+      series: '',
+      description: '',
+      quantity: ''
+    })
+    setShowNewSeriesInput(false)
+    setNewSeriesInput('')
   }
 
   const deleteProduct = (id) => {
     setProducts(products.filter(product => product.id !== id))
+    if (editingId === id) {
+      cancelEdit()
+    }
   }
 
   const handleKeyPress = (e) => {
     if (e.key === 'Enter' && e.target.name !== 'description') {
-      addProduct()
+      saveProduct()
     }
   }
 
   const totalValue = products.reduce((sum, product) => sum + (product.price * product.quantity), 0)
+  const uniqueSeries = getUniqueSeries()
 
   return (
     <div className="app">
@@ -70,6 +150,12 @@ function App() {
         <h1>🛍️ Product Manager</h1>
 
         <div className="form-section">
+          {editingId && (
+            <div className="edit-mode-banner">
+              ✏️ Editing Product - Make changes and click Update
+            </div>
+          )}
+
           <div className="form-row">
             <input
               type="text"
@@ -80,15 +166,34 @@ function App() {
               placeholder="Product name *"
               className="product-input"
             />
-            <input
-              type="text"
-              name="series"
-              value={formData.series}
-              onChange={handleInputChange}
-              onKeyPress={handleKeyPress}
-              placeholder="Series/Category"
-              className="product-input series-input"
-            />
+
+            <div className="series-select-container">
+              <select
+                name="series"
+                value={showNewSeriesInput ? '__new__' : formData.series}
+                onChange={handleSeriesChange}
+                className="product-input series-select"
+              >
+                <option value="">Select Series/Category</option>
+                {uniqueSeries.map(series => (
+                  <option key={series} value={series}>{series}</option>
+                ))}
+                <option value="__new__">+ Add New Series</option>
+              </select>
+
+              {showNewSeriesInput && (
+                <input
+                  type="text"
+                  value={newSeriesInput}
+                  onChange={handleNewSeriesChange}
+                  onKeyPress={handleKeyPress}
+                  placeholder="Enter new series name"
+                  className="product-input new-series-input"
+                  autoFocus
+                />
+              )}
+            </div>
+
             <input
               type="number"
               name="price"
@@ -123,9 +228,16 @@ function App() {
             />
           </div>
 
-          <button onClick={addProduct} className="add-button">
-            Add Product
-          </button>
+          <div className="button-row">
+            <button onClick={saveProduct} className="add-button">
+              {editingId ? '✓ Update Product' : '+ Add Product'}
+            </button>
+            {editingId && (
+              <button onClick={cancelEdit} className="cancel-button">
+                ✕ Cancel
+              </button>
+            )}
+          </div>
         </div>
 
         <div className="stats">
@@ -136,12 +248,17 @@ function App() {
 
         <div className="product-grid">
           {products.map(product => (
-            <div key={product.id} className="product-card">
+            <div key={product.id} className={`product-card ${editingId === product.id ? 'editing' : ''}`}>
               <div className="product-header">
                 <h3 className="product-name">{product.name}</h3>
-                <button onClick={() => deleteProduct(product.id)} className="delete-button">
-                  🗑️
-                </button>
+                <div className="product-actions">
+                  <button onClick={() => editProduct(product)} className="edit-button" title="Edit product">
+                    ✏️
+                  </button>
+                  <button onClick={() => deleteProduct(product.id)} className="delete-button" title="Delete product">
+                    🗑️
+                  </button>
+                </div>
               </div>
 
               <div className="product-details">
